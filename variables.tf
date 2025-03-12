@@ -40,7 +40,7 @@ variable "ssh_public_key" {
 
 variable "disk_name" {
   type = string
-  default = "disk1"
+  default = "diskf"
 }
 
 variable "disk_type" {
