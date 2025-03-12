@@ -33,7 +33,7 @@ resource "google_compute_instance" "ginstance_f" {
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key)}"
-    startup-script = file("/home/student/terraform/gcp2/start.sh")
+    startup-script = join(" ",[file("/home/student/terraform/git/terraform-warsztat/terraform-training-gcp/script.sh"),file("/home/student/terraform/ggit/terraform-warsztat/terraform-training-gcp/start.sh")])
   }
 
   tags = ["http-server"]
