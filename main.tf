@@ -23,8 +23,8 @@ resource "google_compute_instance" "ginstance_f" {
     }
   }
 
-  attacked_disk {
-    source = google_compute_disc.gdisc_f.id
+  attached_disk {
+    source = google_compute_disk.gdisk_f.id
   }
 
   network_interface {
@@ -33,7 +33,7 @@ resource "google_compute_instance" "ginstance_f" {
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key)}"
-    startup-script = file("/home/student/terraform/gcp2/start.sh")
+    startup-script = file("./start.sh")
   }
 
   tags = ["http-server"]
@@ -51,7 +51,7 @@ resource "google_compute_firewall" "gcp_firewall" {
   target_tags = ["http-server"]
 }
 
-resource "google_compute_disc" "gdisc_f" {
+resource "google_compute_disk" "gdisk_f" {
   name = var.disk_name
   type = var.disk_type
   zone = var.vm_zone
