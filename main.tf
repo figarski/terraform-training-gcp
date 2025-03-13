@@ -12,48 +12,65 @@ provider "google" {
   region  = var.region
 }
 
-resource "google_compute_instance" "ginstance_f" {
-    name         = var.vm_name
-    machine_type = var.vm_type
-    zone         = var.vm_zone
-
-  boot_disk {
-    initialize_params {
-      image = var.vm_os
-    }
-  }
-
-  attacked_disk {
-    source = google_compute_disc.gdisc_f.id
-  }
-
-  network_interface {
-    network = "default"
-    access_config {}
-  }
-  metadata = {
-    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key)}"
-    startup-script = file("/home/student/terraform/gcp2/start.sh")
-  }
-
-  tags = ["http-server"]
-
+resource "google_storage_bucket" "bucket-kuba" {
+  name     = "${var.project_name}-function-kuba"
+  location = var.region
 }
 
-resource "google_compute_firewall" "gcp_firewall" {
-  name = "gcp-firewall-pekao"
-  network = "default"
-  source_ranges = ["0.0.0.0/0"]
-  allow {
-    protocol = "tcp"
-    ports = ["80"]
-  }
-  target_tags = ["http-server"]
+resource "google_storage_bucket_object" "archive" {
+  name   = "function-source-zip"
+  bucket = google_storage_bucket.bucket-kuba.name
+  source = "./function-source.zip"
 }
 
-resource "google_compute_disc" "gdisc_f" {
-  name = var.disk_name
-  type = var.disk_type
-  zone = var.vm_zone
-  size = var.disk_size
+resource "google_cloudfunctions_function" "function" {
+  name        = "function-publish-kuba"
+  description = "Funkcja do publikacji na serwis"
+  runtime     = "nodejs18"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.bucket-kuba.name
+  source_archive_object = google_storage_bucket_object.archive.name
+  trigger_http          = true
+  entry_point           = "publishMessage"
+  ingress_settings      = "ALLOW_ALL"
+}
+output "OutputURL" {
+  value       = google_cloudfunctions_function.function.https_trigger_url
+}
+resource "google_pubsub_topic" "topic" {
+  name = "message-topic-kuba"
+}
+resource "google_project_iam_binding" "function_pubsub_publisher" {
+  project = var.project_name
+  role    = "roles/pubsub.publisher"
+
+  members = [
+    "serviceAccount:${var.project_name}@appspot.gserviceaccount.com"
+  ]
+}
+
+resource "google_pubsub_subscription" "subscription" {
+  name  = "subscription-kuba"
+  topic = google_pubsub_topic.topic.name
+
+  ack_deadline_seconds = 20
+
+}
+resource "google_storage_bucket_object" "pr2" {
+  name   = "function-pr2-zip"
+  bucket = google_storage_bucket.bucket-kuba.name
+  source = "./function-pr2.zip"
+} 
+resource "google_cloudfunctions_function" "function-pr2" {
+  name        = "function-pr2-kuba"
+  description = "Funkcja do odczytu"
+  runtime     = "nodejs18"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.bucket-kuba.name
+  source_archive_object = google_storage_bucket_object.pr2.name
+  trigger_http          = true
+  entry_point           = "retrieveMessage"
+  ingress_settings      = "ALLOW_ALL"
 }
